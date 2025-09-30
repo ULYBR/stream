@@ -4,6 +4,8 @@ const env = process.env;
 const NODE_ENV = env.NODE_ENV ?? "local";
 
 export default () => ({
+  awsRegion: env.AWS_REGION ?? "us-east-1",
+  avatarBucket: env.AVATAR_BUCKET ?? "streaming-avatar-bucket",
   port: Number(env.PORT ?? 3000),
   dynamoURI: env.DYNAMODB_ENDPOINT ?? loadConfig[NODE_ENV].dynamoURI,
   dynamoRegion: env.DYNAMODB_REGION ?? "us-east-1",
@@ -19,6 +21,8 @@ export default () => ({
 });
 
 export interface EnvironmentVariables {
+  awsRegion: string;
+  avatarBucket: string;
   port: number;
   dynamoURI: string;
   dynamoRegion: string;
