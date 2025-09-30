@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: nestjs-boilerplate
+  description: Boilerplate para APIs utilizando NestJS.
+  tags:
+    - cobranca
+    - service
+    - boilerplate
+  annotations: 
+  github.com/project-slug: your-org/nestjs-boilerplate
+    backstage.io/techdocs-ref: dir:.
+    backstage.io/adr-location: docs/adr
+spec: 
+  type: service 
+  lifecycle: production 
+  owner: squad-cobranca

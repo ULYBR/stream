@@ -1,0 +1,6 @@
+# CODEOWNERS for a generic NestJS boilerplate
+# Add your organization/team handle(s) below
+@your-org/your-team
+
+# Example: all files in src/ owned by the backend team
+/src/ @your-org/backend-team

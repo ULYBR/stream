@@ -1,0 +1,73 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      AWS_ACCOUNT_ID:
+        required: true
+        type: string
+      AWS_REGION:
+        required: true
+        type: string
+      ENVIRONMENT_NAME:
+        required: true
+        type: string
+      GIT_ENVIRONMENT:
+        required: true
+        type: string
+
+jobs:
+  Deploy:
+    runs-on: [arc-runner-medium]
+    environment: ${{ inputs.GIT_ENVIRONMENT }}
+    env:
+      AWS_ACCOUNT_ID: ${{ inputs.AWS_ACCOUNT_ID }}
+      AWS_REGION: ${{ inputs.AWS_REGION }}
+      ENVIRONMENT: ${{ inputs.ENVIRONMENT_NAME }}
+      GITHUB_ACTIONS_RUNNER_RSA: ${{ secrets.GITHUB_ACTIONS_RUNNER_RSA }}
+      K8S_YAML_REPO: core-k8s-yaml
+      IMAGE_TAG: ${{ inputs.ENVIRONMENT_NAME }}_${{ github.run_id }}
+      REPO_NAME: nestjs-boilerplate
+      SERVICE_NAME: nestjs-boilerplate
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Downloading final package
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Docker image tag date
+        id: date_tag
+        run: echo "DATE_TAG=$(date +'%Y%m%d%H%M%S%Z')" >> $GITHUB_OUTPUT
+
+      - name: Setup environment
+        run: make setup-environment
+
+      - name: Clone core-k8s-yaml repository
+        continue-on-error: false
+        run: make pull-k8s-yaml
+
+      - name: Install dependencies
+        run: make install-dependencies-k8s
+
+      - name: Build and push service Image
+        uses: mr-smithers-excellent/docker-build-push@v5
+        with:
+          image: ${SERVICE_NAME}
+          registry: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          dockerfile: Dockerfile
+          tags: ${IMAGE_TAG}_${{ steps.date_tag.outputs.DATE_TAG }}
+
+      - name: Connect to k8S
+        continue-on-error: false
+        run: |
+          make k8s_connect
+
+      - name: Deploy service
+        continue-on-error: false
+        run: |
+          export BUILD_TAG=${IMAGE_TAG}_${{ steps.date_tag.outputs.DATE_TAG }}
+          make deploy_service

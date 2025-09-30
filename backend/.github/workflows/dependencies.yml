@@ -1,0 +1,31 @@
+name: Dependencies
+
+on:
+  workflow_call:
+
+jobs:
+  Dependencies:
+    runs-on: [arc-runner-medium]
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+
+      - name: Install Dependencies
+        shell: bash
+        run: npm ci --ignore-scripts
+
+      - name: Cache dependencies
+        id: cache-dependencies
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Download and Cache All Deps
+        shell: bash
+        run: npm ci
