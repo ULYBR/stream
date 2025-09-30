@@ -24,11 +24,11 @@ jobs:
       AWS_ACCOUNT_ID: ${{ inputs.AWS_ACCOUNT_ID }}
       AWS_REGION: ${{ inputs.AWS_REGION }}
       ENVIRONMENT: ${{ inputs.ENVIRONMENT_NAME }}
-      GITHUB_ACTIONS_RUNNER_RSA: ${{ secrets.GITHUB_ACTIONS_RUNNER_RSA }}
+      GITHUB_ACTIONS_RUNNER_RSA: ${{ secrets.BANQI_GITHUB_ACTIONS_RUNNER_RSA }}
       K8S_YAML_REPO: core-k8s-yaml
       IMAGE_TAG: ${{ inputs.ENVIRONMENT_NAME }}_${{ github.run_id }}
-      REPO_NAME: nestjs-boilerplate
-      SERVICE_NAME: nestjs-boilerplate
+      REPO_NAME: core-banking-cabine-service
+      SERVICE_NAME: core-banking-cabine-service
     steps:
       - name: Checkout repository code
         uses: actions/checkout@v4
