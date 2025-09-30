@@ -1,13 +1,14 @@
 import { Injectable } from "@nestjs/common";
-import { CreateUserDto } from "@app/modules/user/dto/create-user.dto";
 import { BaseRepository } from "@app/repository/base.repository";
 import { DynamoCommanderWrapper } from "@app/utils/dynamoCommands";
 import { KeyPrefix, createPrefix } from "@app/utils/create-prefix.util";
 import { RedisUtil } from "@app/utils/redis.util";
 import { ConfigService } from "@nestjs/config";
+import { User, UserRole } from "@app/types/user.type";
+import { UserPersistence } from "@app/types/user.persistence.type";
 
 @Injectable()
-export class UserRepository extends BaseRepository<CreateUserDto> {
+export class UserRepository extends BaseRepository<UserPersistence> {
   protected tableName = "User";
   private readonly redisPrefix = KeyPrefix.User;
   private readonly redisUtil: RedisUtil;
@@ -21,28 +22,26 @@ export class UserRepository extends BaseRepository<CreateUserDto> {
     this.redisUtil = new RedisUtil(configService);
   }
 
-  async createUser(user: CreateUserDto): Promise<CreateUserDto> {
+  async createUser(user: UserPersistence): Promise<UserPersistence> {
     await this.create(user);
     const cacheKey = createPrefix(this.redisPrefix, user.email);
     await this.redisUtil.set(cacheKey, user, this.cacheTTL);
     return user;
   }
 
-  async updateUser(
-    user: CreateUserDto & { id: string },
-  ): Promise<CreateUserDto & { id: string }> {
-    await this.update({ key: user.id, data: user });
+  async updateUser(user: UserPersistence): Promise<UserPersistence> {
+    await this.update({ key: user.pk, data: user });
     const cacheKey = createPrefix(this.redisPrefix, user.email);
     await this.redisUtil.del(cacheKey);
     await this.redisUtil.set(cacheKey, user, this.cacheTTL);
     return user;
   }
 
-  async getUserById(id: string): Promise<CreateUserDto | null> {
-    const cacheKey = createPrefix(this.redisPrefix, id);
-    const cached = await this.redisUtil.get<CreateUserDto>(cacheKey);
+  async getUserById(pk: string, sk: string): Promise<UserPersistence | null> {
+    const cacheKey = createPrefix(this.redisPrefix, pk);
+    const cached = await this.redisUtil.get<UserPersistence>(cacheKey);
     if (cached) return cached;
-    const user = await this.findByKey({ id });
+    const user = await this.findByKey({ pk, sk });
     if (user) await this.redisUtil.set(cacheKey, user, this.cacheTTL);
     return user;
   }

@@ -5,7 +5,9 @@ import {
   MinLength,
   MaxLength,
   IsOptional,
+  IsEnum,
 } from "class-validator";
+import { UserRole } from "@app/types/user.type";
 
 export class CreateUserDto {
   @ApiProperty({
@@ -30,8 +32,13 @@ export class CreateUserDto {
   @MaxLength(128)
   password: string;
 
-  @ApiProperty({ example: "user", description: "User role.", required: false })
+  @ApiProperty({
+    example: UserRole.COMMON,
+    enum: UserRole,
+    description: "User role.",
+    required: false,
+  })
   @IsOptional()
-  @IsString()
-  role?: string;
+  @IsEnum(UserRole)
+  role?: UserRole;
 }

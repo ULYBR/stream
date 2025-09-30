@@ -24,14 +24,11 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  // Setup do Swagger para documentação automática
   SwaggerModule.setup("api-docs", app, document);
 
-  // Logger global via nestjs-pino
   app.useLogger(app.get(Logger));
 
   await app.listen(3000);
 }
 
-// Inicializa a aplicação
 bootstrap();
