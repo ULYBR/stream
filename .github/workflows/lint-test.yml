@@ -1,0 +1,76 @@
+name: Lint and Test
+
+on:
+  workflow_call:
+
+jobs:
+  Lint:
+    runs-on: [arc-runner-medium]
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        env:
+          cache-name: node_modules
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install Dependencies
+        shell: bash
+        run: npm ci
+
+      - name: Lint
+        shell: bash
+        run: npm run lint
+  Test:
+    needs: [Lint]
+    runs-on: [arc-runner-medium]
+    container:
+      env:
+        NODE_ENV: ci
+        LOG_LEVEL: debug
+        PORT: 3000        
+        AWS_ENDPOINT: http://localstack:4566        
+        AWS_REGION: us-east-1
+      image: node:22
+    services:
+      localstack:
+        image: localstack/localstack:2.3.2
+        ports:
+          - 4566:4566
+        env:
+          EDGE_PORT: 4566
+          VIRTUAL_HOST: localstack
+          VIRTUAL_PORT: 4566
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        env:
+          cache-name: node_modules
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Download and Cache All Deps
+        shell: bash
+        run: npm ci
+
+      - name: Test
+        shell: bash
+        run: npm run test:cov
