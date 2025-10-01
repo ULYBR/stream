@@ -1,0 +1,27 @@
+name: Dev
+
+on:
+  push:
+    branches:
+      - "main"
+jobs:
+  Prepare:
+    uses: ./.github/workflows/dependencies.yml
+
+  Run:
+    needs: Prepare
+    uses: ./.github/workflows/lint-test.yml
+
+  Build:
+    needs: [Prepare, Run]
+    uses: ./.github/workflows/package.yml
+
+  Dev:
+    needs: [Build, Prepare, Run]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      AWS_ACCOUNT_ID: 00000000000
+      AWS_REGION: us-east-1
+      ENVIRONMENT_NAME: dev
+      GIT_ENVIRONMENT: dev
+    secrets: inherit

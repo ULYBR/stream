@@ -102,5 +102,3 @@ resource "aws_sqs_queue_policy" "chat_messages_policy" {
     ]
   })
 }
-
-# Note: Lambda event source mappings removed as we're using EKS instead of Lambda

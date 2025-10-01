@@ -4,7 +4,6 @@ provider "tls" {}
 
 provider "aws" {
   region = var.aws_region
-
   dynamic "endpoints" {
     for_each = var.localstack_endpoint != "" ? [1] : []
     content {
