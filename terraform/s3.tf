@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "frontend" {
-  bucket = "${local.name_prefix}-frontend-${random_id.bucket_suffix.hex}"
+  bucket = "${local.name_prefix}frontend${random_id.bucket_suffix.dec}"
 
   tags = merge(local.common_tags, {
     Purpose = "Frontend static assets"
@@ -52,7 +52,7 @@ resource "aws_s3_bucket_policy" "frontend" {
 }
 
 resource "aws_s3_bucket" "uploads" {
-  bucket = "${local.name_prefix}-uploads-${random_id.bucket_suffix.hex}"
+  bucket = "${local.name_prefix}uploads${random_id.bucket_suffix.dec}"
 
   tags = merge(local.common_tags, {
     Purpose = "User uploads and content"
@@ -118,7 +118,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
 }
 
 resource "aws_s3_bucket" "backups" {
-  bucket = "${local.name_prefix}-backups-${random_id.bucket_suffix.hex}"
+  bucket = "${local.name_prefix}backups${random_id.bucket_suffix.dec}"
 
   tags = merge(local.common_tags, {
     Purpose = "Application backups and archives"

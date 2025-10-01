@@ -22,7 +22,6 @@ provider "aws" {
       elbv2                = "${var.localstack_endpoint}/elbv2"
       iam                  = "${var.localstack_endpoint}/iam"
       lambda               = "${var.localstack_endpoint}/lambda"
-      logs                 = "${var.localstack_endpoint}/logs"
       route53              = "${var.localstack_endpoint}/route53"
       s3                   = "${var.localstack_endpoint}/s3"
       secretsmanager       = "${var.localstack_endpoint}/secretsmanager"

@@ -71,7 +71,7 @@ resource "aws_sqs_queue_policy" "stream_events_policy" {
       {
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.eks_node_group.arn
+          AWS = aws_iam_role.ecs_task.arn
         }
         Action   = "sqs:*"
         Resource = aws_sqs_queue.stream_events.arn
@@ -89,7 +89,7 @@ resource "aws_sqs_queue_policy" "chat_messages_policy" {
       {
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.eks_node_group.arn
+          AWS = aws_iam_role.ecs_task.arn
         }
         Action = [
           "sqs:SendMessage",

@@ -41,45 +41,6 @@ resource "aws_security_group" "alb" {
   tags = local.common_tags
 }
 
-resource "aws_security_group" "eks_nodes" {
-  name        = "${local.name_prefix}-eks-nodes-sg"
-  description = "Security group for EKS worker nodes"
-  vpc_id      = data.aws_vpc.default.id
-
-  ingress {
-    description     = "Traffic from ALB"
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  ingress {
-    description = "Node to node"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "-1"
-    self        = true
-  }
-
-  ingress {
-    description = "Control plane to nodes"
-    from_port   = 1025
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = local.common_tags
-}
-
 resource "aws_lb_target_group" "backend" {
   name        = "${local.name_prefix}-backend-tg"
   port        = 3000
@@ -171,6 +132,18 @@ resource "aws_lb_listener_rule" "api" {
     path_pattern {
       values = ["/api/*"]
     }
+  }
+
+  tags = local.common_tags
+}
+resource "aws_lb_listener" "backend" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "3000"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
   }
 
   tags = local.common_tags

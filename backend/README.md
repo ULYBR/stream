@@ -1,33 +1,57 @@
-# Stream Project Backend
+# Stream Project Ba## 🚀 Quick Start
 
-A complete NestJS backend for a live streaming platform with real-time chat functionality.
+```bash
+cp env.example .env
+npm install
+npm run dev:full
+curl http://localhost:3000/health/status
+```NestJS completo para plataforma de streaming ao vivo com chat em tempo real e arquitetura event-driven.
 
-## 🚀 Quick Start
+## 🏗️ Arquitetura
 
-1. Copy `env.example` to `.env` and update environment variables.
-2. Install dependencies: `npm install`
-3. Run in development: `npm run start:dev`
-4. Access Swagger documentation: `http://localhost:3000/api-docs`
+### Tecnologias Principais
+- **NestJS** - Framework Node.js
+- **TypeScript** - Linguagem tipada
+- **DynamoDB** - Banco de dados NoSQL
+- **SQS** - Filas de mensagens para eventos
+- **WebSocket** - Chat em tempo real
+- **Pino** - Logs estruturados
 
-## 📋 API Documentation
+### Event-Driven Architecture
+```
+Controller → Service → EventPublisher → SQS → EventProcessor → Database
+```
 
-### Swagger UI
-Access the interactive API documentation at: **`http://localhost:3000/api-docs`**
+## � Quick Start
 
-### Available Routes
+```bash
+# 1. Configurar variáveis de ambiente
+cp env.example .env
 
-#### 🏥 Health Check
-- `GET /health/status` - Application health status
-- `GET /health/readiness` - Application readiness check
+# 2. Instalar dependências
+npm install
 
-#### 🔐 Authentication (`/api/auth`)
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
+# 3. Iniciar infraestrutura + aplicação
+npm run dev:full
 
-#### 👤 User Management (`/api/user`)
-- `POST /api/user/avatar` - Upload user avatar
-- `POST /api/user` - Create new user
-- `PUT /api/user/:id` - Update user by ID
+# 4. Acessar aplicação
+curl http://localhost:3000/health/status
+```
+
+## 📋 APIs Disponíveis
+
+### 🏥 Health Check
+- `GET /health/status` - Status da aplicação (publica evento de sistema)
+- `GET /health/readiness` - Verificação de prontidão
+
+### 🔐 Authentication (`/api/auth`)
+- `POST /api/auth/login` - Login do usuário
+- `POST /api/auth/register` - Registro de usuário
+
+### 👤 User Management (`/api/user`)
+- `POST /api/user/avatar` - Upload de avatar
+- `POST /api/user` - Criar usuário
+- `PUT /api/user/:id` - Atualizar usuário
 - `POST /api/user/me` - Get current user profile
 
 #### 📺 Stream Management (`/api/streams`)

@@ -4,14 +4,15 @@ import { Controller, Get } from "@nestjs/common";
 
 @Controller("health")
 export class HealthController {
-  constructor(private readonly healthService: HealthService) {}
+  constructor(private readonly healthService: HealthService) { }
+
   @Get("status")
-  checkLive(): string {
-    return this.healthService.checkLive();
+  async checkLive(): Promise<string> {
+    return await this.healthService.checkLive();
   }
 
   @Get("readiness")
-  checkReady(): string {
-    return this.healthService.checkReady();
+  async checkReady(): Promise<string> {
+    return await this.healthService.checkReady();
   }
 }
