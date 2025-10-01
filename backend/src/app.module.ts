@@ -5,8 +5,9 @@ import { LoggerModule } from "nestjs-pino";
 
 import configuration from "@app/config/env.config";
 import { UserModule } from "@app/modules/user/user.module";
-import { ChatModule } from "@app/modules/chat/chat.module";
 import { HealthModule } from "@app/modules/health/health.module";
+import { StreamsModule } from "@app/modules/streams/streams.module";
+import { ChatModule } from "@app/modules/chat/chat.module";
 import { LoggerMiddleware } from "@app/utils/logging/logger.middleware";
 import { AuthModule } from "@app/modules/auth/auth.module";
 
@@ -23,6 +24,7 @@ import { AuthModule } from "@app/modules/auth/auth.module";
     HealthModule,
     UserModule,
     ChatModule,
+    StreamsModule,
     AuthModule,
   ],
 })

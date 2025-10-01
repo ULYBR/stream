@@ -169,7 +169,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
     }
 
     expiration {
-      days = 2555 
+      days = 2555
     }
   }
 }

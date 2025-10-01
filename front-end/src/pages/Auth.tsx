@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Video, Mail, Lock, User } from "lucide-react";
 import { toast } from "sonner";
+import { authService } from "@/services/auth";
 
 const Auth = () => {
     const navigate = useNavigate();
@@ -19,18 +20,22 @@ const Auth = () => {
         e.preventDefault();
         setIsLoading(true);
 
-        // TODO: Integrar com API de login
-        // POST /api/auth/login
-        // Body: { email, password }
-        // Response: { token, user: { id, name, email, avatar } }
+        try {
+            const response = await authService.login({
+                email: loginData.email,
+                password: loginData.password,
+            });
 
-        setTimeout(() => {
-            localStorage.setItem("token", "mock-jwt-token");
-            localStorage.setItem("user", JSON.stringify({ id: 1, name: "User", email: loginData.email }));
+            authService.saveAuthData(response);
             toast.success("Login realizado com sucesso!");
             navigate("/");
+        } catch (error: any) {
+            console.error('Login error:', error);
+            const message = error.response?.data?.message || "Erro ao fazer login. Verifique suas credenciais.";
+            toast.error(message);
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
 
     const handleSignup = async (e: React.FormEvent) => {

@@ -6,8 +6,8 @@ import { JwtAuthGuard } from "@app/modules/auth/provider/jwt-auth.guard";
 import { AuthService } from "@app/modules/auth/service/auth.service";
 
 @Module({
-    imports: [forwardRef(() => UserModule)],
-    providers: [JwtProvider, JwtAuthGuard, AuthService],
-    exports: [JwtProvider, JwtAuthGuard, AuthService],
+  imports: [forwardRef(() => UserModule)],
+  providers: [JwtProvider, JwtAuthGuard, AuthService],
+  exports: [JwtProvider, JwtAuthGuard, AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}
