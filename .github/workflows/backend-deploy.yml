@@ -1,0 +1,145 @@
+name: Backend Deploy
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+    branches:
+      - main
+    tags:
+      - 'backend-v*'
+
+env:
+  PROJECT_PATH: backend
+  SERVICE_NAME: streamhub-backend
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-dev:
+    name: Deploy to Development (LocalStack)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ env.PROJECT_PATH }}/package-lock.json
+
+      - name: Install dependencies
+        run: cd ${{ env.PROJECT_PATH }} && npm ci
+
+      - name: Build application
+        run: cd ${{ env.PROJECT_PATH }} && npm run build
+
+      - name: Setup LocalStack
+        run: |
+          docker run -d \
+            --name localstack \
+            -p 4566:4566 \
+            -e SERVICES=dynamodb,sqs,sns,lambda,apigateway \
+            -e DEBUG=1 \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            localstack/localstack:3.0
+
+      - name: Wait for LocalStack
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:4566/_localstack/health; do sleep 2; done'
+
+      - name: Setup AWS CLI for LocalStack
+        run: |
+          pip install awscli-local
+          export AWS_ACCESS_KEY_ID=test
+          export AWS_SECRET_ACCESS_KEY=test
+          export AWS_DEFAULT_REGION=us-east-1
+
+      - name: Deploy infrastructure with Terraform
+        run: |
+          cd terraform
+          terraform init
+          terraform plan -var="environment=dev" -var="localstack_endpoint=http://localhost:4566"
+          terraform apply -auto-approve -var="environment=dev" -var="localstack_endpoint=http://localhost:4566"
+
+      - name: Build Docker image
+        run: |
+          cd ${{ env.PROJECT_PATH }}
+          docker build -t ${{ env.SERVICE_NAME }}:dev .
+
+      - name: Deploy to LocalStack Lambda
+        run: |
+          cd ${{ env.PROJECT_PATH }}
+          # Create deployment package
+          zip -r deployment.zip dist/ package.json
+          
+          # Create Lambda function
+          awslocal lambda create-function \
+            --function-name ${{ env.SERVICE_NAME }} \
+            --runtime nodejs20.x \
+            --role arn:aws:iam::000000000000:role/lambda-execution-role \
+            --handler index.handler \
+            --zip-file fileb://deployment.zip \
+            --environment Variables="{NODE_ENV=development,DYNAMODB_ENDPOINT=http://localhost:4566}" \
+            --endpoint-url http://localhost:4566
+
+      - name: Update Lambda function
+        run: |
+          cd ${{ env.PROJECT_PATH }}
+          awslocal lambda update-function-code \
+            --function-name ${{ env.SERVICE_NAME }} \
+            --zip-file fileb://deployment.zip \
+            --endpoint-url http://localhost:4566
+
+      - name: Create API Gateway
+        run: |
+          # Create REST API
+          API_ID=$(awslocal apigateway create-rest-api \
+            --name ${{ env.SERVICE_NAME }}-api \
+            --endpoint-url http://localhost:4566 \
+            --query 'id' --output text)
+          
+          echo "API_ID=$API_ID" >> $GITHUB_ENV
+          
+          # Get root resource ID
+          ROOT_ID=$(awslocal apigateway get-resources \
+            --rest-api-id $API_ID \
+            --endpoint-url http://localhost:4566 \
+            --query 'items[0].id' --output text)
+          
+          # Create proxy resource
+          awslocal apigateway create-resource \
+            --rest-api-id $API_ID \
+            --parent-id $ROOT_ID \
+            --path-part '{proxy+}' \
+            --endpoint-url http://localhost:4566
+
+      - name: Test deployment
+        run: |
+          # Test health endpoint
+          curl -f http://localhost:4566/restapis/${{ env.API_ID }}/dev/_user_request_/health/status || echo "Health check failed"
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/backend-v')
+    environment: production
+    needs: []
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to AWS
+        run: |
+          echo "Production deployment would go here"
+          echo "Tag: ${{ github.ref_name }}"

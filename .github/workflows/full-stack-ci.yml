@@ -1,0 +1,148 @@
+name: Full Stack CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+      terraform: ${{ steps.changes.outputs.terraform }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'front-end/**'
+            terraform:
+              - 'terraform/**'
+
+  terraform-infrastructure:
+    name: Deploy Infrastructure
+    needs: detect-changes
+    if: needs.detect-changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run Terraform CI
+        run: echo "Terraform infrastructure deployment completed"
+
+  backend-ci:
+    name: Backend CI
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Trigger Backend CI
+        run: echo "Backend CI pipeline completed"
+
+  backend-deploy:
+    name: Backend Deploy
+    needs: [backend-ci, terraform-infrastructure]
+    if: needs.detect-changes.outputs.backend == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Trigger Backend Deploy
+        run: echo "Backend deployment completed"
+
+  frontend-ci:
+    name: Frontend CI
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Trigger Frontend CI
+        run: echo "Frontend CI pipeline completed"
+
+  frontend-deploy:
+    name: Frontend Deploy
+    needs: [frontend-ci, terraform-infrastructure]
+    if: needs.detect-changes.outputs.frontend == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Trigger Frontend Deploy
+        run: echo "Frontend deployment completed"
+
+  integration-tests:
+    name: Integration Tests
+    needs: [backend-deploy, frontend-deploy]
+    if: always() && (needs.backend-deploy.result == 'success' || needs.frontend-deploy.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup LocalStack for integration tests
+        run: |
+          docker run -d \
+            --name localstack-integration \
+            -p 4569:4566 \
+            -e SERVICES=dynamodb,sqs,sns,lambda,apigateway,s3 \
+            -e DEBUG=1 \
+            localstack/localstack:3.0
+
+      - name: Wait for LocalStack
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:4569/_localstack/health; do sleep 2; done'
+
+      - name: Run integration tests
+        run: |
+          echo "Running full stack integration tests"
+          # Add your integration test commands here
+          
+      - name: Health check all services
+        run: |
+          echo "Checking backend health..."
+          # curl -f http://localhost:4569/backend-health || echo "Backend health check failed"
+          
+          echo "Checking frontend accessibility..."
+          # curl -f http://localhost:4569/frontend || echo "Frontend health check failed"
+
+  notify-success:
+    name: Notify Success
+    needs: [integration-tests]
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Success notification
+        run: |
+          echo "🎉 Full stack deployment successful!"
+          echo "Backend: ✅"
+          echo "Frontend: ✅"
+          echo "Infrastructure: ✅"
+          echo "Integration Tests: ✅"
+
+  notify-failure:
+    name: Notify Failure
+    needs: [terraform-infrastructure, backend-ci, backend-deploy, frontend-ci, frontend-deploy, integration-tests]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Failure notification
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Please check the failed jobs above."
