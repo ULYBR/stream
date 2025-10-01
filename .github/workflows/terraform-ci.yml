@@ -65,7 +65,7 @@ jobs:
           docker run -d \
             --name localstack-terraform \
             -p 4568:4566 \
-            -e SERVICES=dynamodb,sqs,sns,lambda,apigateway,s3,iam \
+            -e SERVICES=dynamodb,sqs,sns,s3,iam,secretsmanager,ecr,ecs,ec2,elbv2,acm,route53 \
             -e DEBUG=1 \
             localstack/localstack:3.0
 
@@ -116,7 +116,7 @@ jobs:
           docker run -d \
             --name localstack-terraform \
             -p 4568:4566 \
-            -e SERVICES=dynamodb,sqs,sns,lambda,apigateway,s3,iam \
+            -e SERVICES=dynamodb,sqs,sns,s3,iam,secretsmanager,ecr,ecs,ec2,elbv2,acm,route53 \
             -e DEBUG=1 \
             -e PERSISTENCE=1 \
             localstack/localstack:3.0

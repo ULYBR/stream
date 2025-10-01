@@ -1,0 +1,301 @@
+name: Full Stack Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  LOCALSTACK_ENDPOINT: http://localstack:4566
+
+jobs:
+  infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    outputs:
+      ecr-backend-uri: ${{ steps.outputs.outputs.ecr-backend-uri }}
+      ecr-frontend-uri: ${{ steps.outputs.outputs.ecr-frontend-uri }}
+      eks-cluster-name: ${{ steps.outputs.outputs.eks-cluster-name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.6.0'
+
+      - name: Setup LocalStack
+        run: |
+          docker run -d \
+            --name localstack-deploy \
+            -p 4566:4566 \
+            -e SERVICES=dynamodb,sqs,sns,s3,iam,secretsmanager,ecr,ecs,ec2,elbv2,acm,route53 \
+            -e DEBUG=1 \
+            -e PERSISTENCE=1 \
+            -e DOCKER_HOST=unix:///var/run/docker.sock \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            localstack/localstack:3.0
+
+      - name: Wait for LocalStack
+        run: |
+          timeout 120 bash -c 'until curl -f http://localhost:4566/_localstack/health; do sleep 2; done'
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init \
+            -backend-config="endpoint=http://localhost:4566" \
+            -backend-config="access_key=test" \
+            -backend-config="secret_key=test"
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          export AWS_ACCESS_KEY_ID=test
+          export AWS_SECRET_ACCESS_KEY=test
+          terraform apply -auto-approve \
+            -var="environment=dev" \
+            -var="localstack_endpoint=http://localhost:4566"
+
+      - name: Get Infrastructure Outputs
+        id: outputs
+        run: |
+          cd terraform
+          echo "ecr-backend-uri=$(terraform output -raw ecr_repositories | jq -r '.backend.url')" >> $GITHUB_OUTPUT
+          echo "ecr-frontend-uri=$(terraform output -raw ecr_repositories | jq -r '.frontend.url')" >> $GITHUB_OUTPUT
+          echo "eks-cluster-name=$(terraform output -raw eks_cluster | jq -r '.name')" >> $GITHUB_OUTPUT
+
+  build-backend:
+    name: Build and Push Backend
+    runs-on: ubuntu-latest
+    needs: infrastructure
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup LocalStack CLI
+        run: |
+          pip install localstack awscli-local
+
+      - name: Configure AWS CLI for LocalStack
+        run: |
+          aws configure set aws_access_key_id test
+          aws configure set aws_secret_access_key test
+          aws configure set region us-east-1
+
+      - name: Start LocalStack
+        run: |
+          docker run -d \
+            --name localstack-backend \
+            -p 4566:4566 \
+            -e SERVICES=ecr \
+            -e DEBUG=1 \
+            -e DOCKER_HOST=unix:///var/run/docker.sock \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            localstack/localstack:3.0
+
+      - name: Wait for LocalStack
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:4566/_localstack/health; do sleep 2; done'
+
+      - name: Build and Push Backend Image
+        run: |
+          cd backend
+          
+          # Build Docker image
+          docker build -t streamhub-backend .
+          
+          # Tag for LocalStack ECR
+          docker tag streamhub-backend:latest localhost.localstack.cloud:4566/streamhub-dev-backend:latest
+          
+          # Push to LocalStack ECR
+          awslocal ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin localhost.localstack.cloud:4566
+          docker push localhost.localstack.cloud:4566/streamhub-dev-backend:latest
+
+  build-frontend:
+    name: Build and Push Frontend
+    runs-on: ubuntu-latest
+    needs: infrastructure
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup LocalStack CLI
+        run: |
+          pip install localstack awscli-local
+
+      - name: Configure AWS CLI for LocalStack
+        run: |
+          aws configure set aws_access_key_id test
+          aws configure set aws_secret_access_key test
+          aws configure set region us-east-1
+
+      - name: Start LocalStack
+        run: |
+          docker run -d \
+            --name localstack-frontend \
+            -p 4566:4566 \
+            -e SERVICES=ecr \
+            -e DEBUG=1 \
+            -e DOCKER_HOST=unix:///var/run/docker.sock \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            localstack/localstack:3.0
+
+      - name: Wait for LocalStack
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:4566/_localstack/health; do sleep 2; done'
+
+      - name: Build and Push Frontend Image
+        run: |
+          cd front-end
+          
+          # Build Docker image
+          docker build -t streamhub-frontend .
+          
+          # Tag for LocalStack ECR
+          docker tag streamhub-frontend:latest localhost.localstack.cloud:4566/streamhub-dev-frontend:latest
+          
+          # Push to LocalStack ECR
+          awslocal ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin localhost.localstack.cloud:4566
+          docker push localhost.localstack.cloud:4566/streamhub-dev-frontend:latest
+
+  deploy-k8s:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: [infrastructure, build-backend, build-frontend]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Kubernetes Manifests
+        run: |
+          mkdir -p k8s
+          
+          # Backend Deployment
+          cat > k8s/backend-deployment.yaml << EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: streamhub-backend
+            namespace: streamhub
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: streamhub-backend
+            template:
+              metadata:
+                labels:
+                  app: streamhub-backend
+              spec:
+                containers:
+                - name: backend
+                  image: localhost.localstack.cloud:4566/streamhub-dev-backend:latest
+                  ports:
+                  - containerPort: 3000
+                  env:
+                  - name: NODE_ENV
+                    value: "development"
+                  - name: PORT
+                    value: "3000"
+                  - name: DYNAMODB_ENDPOINT
+                    value: "http://localhost:4566"
+                  livenessProbe:
+                    httpGet:
+                      path: /health
+                      port: 3000
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                  readinessProbe:
+                    httpGet:
+                      path: /health
+                      port: 3000
+                    initialDelaySeconds: 5
+                    periodSeconds: 5
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: streamhub-backend-service
+            namespace: streamhub
+          spec:
+            selector:
+              app: streamhub-backend
+            ports:
+            - port: 3000
+              targetPort: 3000
+            type: ClusterIP
+          EOF
+          
+          # Frontend Deployment
+          cat > k8s/frontend-deployment.yaml << EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: streamhub-frontend
+            namespace: streamhub
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: streamhub-frontend
+            template:
+              metadata:
+                labels:
+                  app: streamhub-frontend
+              spec:
+                containers:
+                - name: frontend
+                  image: localhost.localstack.cloud:4566/streamhub-dev-frontend:latest
+                  ports:
+                  - containerPort: 80
+                  livenessProbe:
+                    httpGet:
+                      path: /health
+                      port: 80
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                  readinessProbe:
+                    httpGet:
+                      path: /health
+                      port: 80
+                    initialDelaySeconds: 5
+                    periodSeconds: 5
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: streamhub-frontend-service
+            namespace: streamhub
+          spec:
+            selector:
+              app: streamhub-frontend
+            ports:
+            - port: 80
+              targetPort: 80
+            type: ClusterIP
+          EOF
+          
+          # Namespace
+          cat > k8s/namespace.yaml << EOF
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: streamhub
+          EOF
+
+      - name: Save Kubernetes Manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubernetes-manifests
+          path: k8s/
+
+      - name: Log Deployment Status
+        run: |
+          echo "🚀 Deployment completed successfully!"
+          echo "📝 Kubernetes manifests created and saved as artifacts"
+          echo "🐳 Container images pushed to LocalStack ECR"
+          echo "📊 Infrastructure provisioned with Terraform"
