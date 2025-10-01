@@ -4,7 +4,6 @@ provider "tls" {}
 
 provider "aws" {
   region = var.aws_region
-
   dynamic "endpoints" {
     for_each = var.localstack_endpoint != "" ? [1] : []
     content {
@@ -21,7 +20,6 @@ provider "aws" {
       elasticloadbalancing = "${var.localstack_endpoint}/elasticloadbalancing"
       elbv2                = "${var.localstack_endpoint}/elbv2"
       iam                  = "${var.localstack_endpoint}/iam"
-      lambda               = "${var.localstack_endpoint}/lambda"
       logs                 = "${var.localstack_endpoint}/logs"
       route53              = "${var.localstack_endpoint}/route53"
       s3                   = "${var.localstack_endpoint}/s3"

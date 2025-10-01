@@ -1,0 +1,14 @@
+name: CI
+
+on:
+  push:
+    branches-ignore:
+      - "main"
+
+jobs:
+  Prepare:
+    uses: ./.github/workflows/dependencies.yml
+
+  Run:
+    needs: Prepare
+    uses: ./.github/workflows/lint-test.yml

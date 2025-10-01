@@ -1,10 +1,9 @@
 locals {
   environment = var.environment
   region      = var.aws_region
-
   project_name = var.project_name
   name_prefix  = "${var.project_name}-${var.environment}"
-
+  
   common_tags = merge(
     {
       Project     = var.project_name
