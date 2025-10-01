@@ -1,0 +1,126 @@
+name: Docker Compose Local Development
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  local-development:
+    name: Local Development Setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create environment file
+        run: |
+          cat > .env << EOF
+          NODE_ENV=${{ github.event.inputs.environment }}
+          DYNAMODB_ENDPOINT=http://localstack:4566
+          DYNAMODB_REGION=us-east-1
+          AWS_ACCESS_KEY_ID=test
+          AWS_SECRET_ACCESS_KEY=test
+          SQS_ENDPOINT=http://localstack:4566
+          SNS_ENDPOINT=http://localstack:4566
+          JWT_SECRET=development-jwt-secret
+          FRONTEND_URL=http://localhost:5173
+          BACKEND_URL=http://localhost:3000
+          EOF
+
+      - name: Start LocalStack and services
+        run: |
+          docker-compose up -d localstack
+          
+          # Wait for LocalStack to be ready
+          timeout 60 bash -c 'until curl -f http://localhost:4566/_localstack/health; do sleep 2; done'
+
+      - name: Initialize infrastructure
+        run: |
+          cd terraform
+          docker run --rm \
+            --network host \
+            -v $(pwd):/workspace \
+            -w /workspace \
+            -e AWS_ACCESS_KEY_ID=test \
+            -e AWS_SECRET_ACCESS_KEY=test \
+            -e AWS_DEFAULT_REGION=us-east-1 \
+            hashicorp/terraform:1.6.0 init
+          
+          docker run --rm \
+            --network host \
+            -v $(pwd):/workspace \
+            -w /workspace \
+            -e AWS_ACCESS_KEY_ID=test \
+            -e AWS_SECRET_ACCESS_KEY=test \
+            -e AWS_DEFAULT_REGION=us-east-1 \
+            hashicorp/terraform:1.6.0 apply -auto-approve \
+              -var="environment=dev" \
+              -var="localstack_endpoint=http://localhost:4566"
+
+      - name: Build and start backend
+        run: |
+          docker-compose up -d backend
+          
+          # Wait for backend to be ready
+          timeout 60 bash -c 'until curl -f http://localhost:3000/health/status; do sleep 2; done'
+
+      - name: Build and start frontend
+        run: |
+          docker-compose up -d frontend
+          
+          # Wait for frontend to be ready
+          timeout 60 bash -c 'until curl -f http://localhost:5173; do sleep 2; done'
+
+      - name: Run health checks
+        run: |
+          echo "🔍 Running health checks..."
+          
+          echo "✅ LocalStack health:"
+          curl -s http://localhost:4566/_localstack/health | jq .
+          
+          echo "✅ Backend health:"
+          curl -s http://localhost:3000/health/status
+          
+          echo "✅ Frontend accessibility:"
+          curl -s -I http://localhost:5173 | head -1
+
+      - name: Run integration tests
+        run: |
+          echo "🧪 Running integration tests..."
+          
+          # Test backend API
+          echo "Testing backend API..."
+          curl -f http://localhost:3000/health/status
+          
+          # Test frontend
+          echo "Testing frontend..."
+          curl -f http://localhost:5173
+
+      - name: Display service URLs
+        run: |
+          echo "🌐 Service URLs:"
+          echo "Frontend: http://localhost:5173"
+          echo "Backend: http://localhost:3000"
+          echo "LocalStack: http://localhost:4566"
+          echo "LocalStack Web UI: http://localhost:4566/_localstack/cockpit"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker-compose down -v
+          docker system prune -f
