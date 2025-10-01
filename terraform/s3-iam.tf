@@ -94,7 +94,6 @@ resource "aws_iam_policy" "s3_backups_policy" {
   tags = local.common_tags
 }
 
-# Combined S3 policy for applications that need access to all buckets
 data "aws_iam_policy_document" "s3_full_access_policy" {
   statement {
     effect = "Allow"

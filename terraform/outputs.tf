@@ -1,13 +1,8 @@
-output "eks_cluster" {
-  description = "EKS cluster information"
+output "ecs_cluster" {
+  description = "ECS cluster information"
   value = {
-    name                          = aws_eks_cluster.main.name
-    arn                          = aws_eks_cluster.main.arn
-    endpoint                     = aws_eks_cluster.main.endpoint
-    version                      = aws_eks_cluster.main.version
-    platform_version             = aws_eks_cluster.main.platform_version
-    cluster_security_group_id    = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
-    oidc_issuer_url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
+    name = aws_ecs_cluster.main.name
+    arn  = aws_ecs_cluster.main.arn
   }
 }
 
@@ -30,10 +25,10 @@ output "ecr_repositories" {
 output "load_balancer" {
   description = "Application Load Balancer information"
   value = {
-    dns_name    = aws_lb.main.dns_name
-    zone_id     = aws_lb.main.zone_id
-    arn         = aws_lb.main.arn
-    hosted_zone = aws_lb.main.zone_id
+    dns_name                  = aws_lb.main.dns_name
+    zone_id                   = aws_lb.main.zone_id
+    arn                       = aws_lb.main.arn
+    hosted_zone               = aws_lb.main.zone_id
     backend_target_group_arn  = aws_lb_target_group.backend.arn
     frontend_target_group_arn = aws_lb_target_group.frontend.arn
   }
@@ -110,7 +105,7 @@ output "sns_topics" {
   value = {
     stream_notifications = aws_sns_topic.stream_notifications.arn
     user_notifications   = aws_sns_topic.user_notifications.arn
-    system_alerts       = aws_sns_topic.system_alerts.arn
+    system_alerts        = aws_sns_topic.system_alerts.arn
   }
 }
 
@@ -125,9 +120,8 @@ output "secrets" {
 output "iam_roles" {
   description = "IAM role ARNs"
   value = {
-    eks_cluster_role      = aws_iam_role.eks_cluster.arn
-    eks_node_group_role   = aws_iam_role.eks_node_group.arn
-    eks_service_account_role = aws_iam_role.eks_service_account.arn
+    ecs_execution_role = aws_iam_role.ecs_execution.arn
+    ecs_task_role      = aws_iam_role.ecs_task.arn
   }
 }
 
@@ -141,7 +135,6 @@ output "environment_info" {
     name_prefix       = local.name_prefix
     domain_name       = var.domain_name
     load_balancer_dns = aws_lb.main.dns_name
-    eks_cluster_name  = aws_eks_cluster.main.name
-    eks_endpoint      = aws_eks_cluster.main.endpoint
+    ecs_cluster_name  = aws_ecs_cluster.main.name
   }
 }

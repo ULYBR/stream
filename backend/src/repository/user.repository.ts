@@ -4,7 +4,6 @@ import { DynamoCommanderWrapper } from "@app/utils/dynamoCommands";
 import { KeyPrefix, createPrefix } from "@app/utils/create-prefix.util";
 import { RedisUtil } from "@app/utils/redis.util";
 import { ConfigService } from "@nestjs/config";
-import { User, UserRole } from "@app/types/user.type";
 import { UserPersistence } from "@app/types/user.persistence.type";
 
 @Injectable()

@@ -2,6 +2,7 @@ import { Controller, Post, Body, Res, Req } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from "@nestjs/swagger";
 import { AuthService } from "@app/modules/auth/service/auth.service";
 import { LoginDto } from "@app/modules/auth/dto/login.dto";
+import { RegisterDto } from "@app/modules/auth/dto/register.dto";
 import { Logger } from "nestjs-pino";
 
 @ApiTags("Auth")
@@ -53,6 +54,50 @@ export class AuthController {
       }
     } catch (error) {
       this.logger.error({ email: loginDto.email, error, msg: "Login error" });
+      throw error;
+    }
+  }
+
+  @Post("register")
+  @ApiOperation({ summary: "Register new user and return JWT token." })
+  @ApiBody({ type: RegisterDto })
+  @ApiResponse({
+    status: 201,
+    description: "Registration successful. Returns JWT token and user data.",
+    schema: {
+      example: {
+        token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        expiresIn: "3600",
+        user: {
+          id: "john.doe@email.com",
+          name: "John Doe",
+          email: "john.doe@email.com",
+          avatar: "",
+          createdAt: "2025-01-16T12:00:00Z",
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: "User already exists or validation error.",
+  })
+  async register(@Body() registerDto: RegisterDto, @Res() res, @Req() req) {
+    this.logger.log({ email: registerDto.email, msg: "Registration attempt" });
+    try {
+      const result = await this.authService.register(registerDto);
+      this.logger.log({
+        email: registerDto.email,
+        msg: "Registration successful",
+      });
+      res.setHeader("X-Request-ID", req.headers["x-trace-id"] ?? "");
+      return res.status(201).json(result);
+    } catch (error) {
+      this.logger.error({
+        email: registerDto.email,
+        error,
+        msg: "Registration error",
+      });
       throw error;
     }
   }

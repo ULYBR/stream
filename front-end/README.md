@@ -1,53 +1,60 @@
 # 🎥 StreamHub - Frontend
 
-Plataforma moderna de streaming de vídeo ao vivo com chat em tempo real, desenvolvida com **React**, **TypeScript** e **Tailwind CSS**.
+Interface moderna para plataforma de streaming ao vivo com chat em tempo real, desenvolvida com **React**, **TypeScript** e **shadcn/ui**.
 
----
+## � Tecnologias
 
-## 📚 Documentação Completa
+### Core
+- **React 18** - Biblioteca UI moderna
+- **TypeScript** - Tipagem estática  
+- **Vite** - Build tool ultra-rápido
+- **Tailwind CSS** - Styling utilitário
+- **shadcn/ui** - Componentes modernos
 
-| Documento | Descrição |
-|-----------|-----------|
-| **[📥 INSTALLATION.md](./INSTALLATION.md)** | **Guia completo de instalação e execução do frontend** |
-| **[🚀 BACKEND_GUIDE.md](./BACKEND_GUIDE.md)** | **Guia passo a passo para desenvolver o backend** |
-| **[📡 API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** | Documentação de todos os endpoints e WebSocket |
-
----
+### Integração
+- **Axios** - Cliente HTTP
+- **React Hook Form** - Formulários
+- **Zod** - Validação de schemas
 
 ## ⚡ Instalação Rápida
 
 ```bash
-# 1. Clone o repositório
-git clone <URL_DO_REPOSITORIO>
-cd streamhub-frontend
-
-# 2. Instale as dependências
 npm install
-
-# 3. Configure o ambiente
 cp .env.example .env.local
-# Edite .env.local com as URLs do seu backend
-
-# 4. Execute o projeto
+# Configure: VITE_API_URL=http://localhost:3000
 npm run dev
 ```
 
-✅ Aplicativo rodando em: **http://localhost:8080**
+✅ Aplicativo rodando em: **http://localhost:5173**
 
-📖 **Para instruções detalhadas, veja [INSTALLATION.md](./INSTALLATION.md)**
+## � Páginas Implementadas
 
----
+### ✅ Funcionais
+- **Auth** (`/auth`) - Login e registro de usuários
+- **Dashboard** (`/`) - Visão geral das streams
+- **StreamView** (`/:id`) - Visualização de streams individuais
+- **NotFound** (`/404`) - Página de erro 404
 
-![StreamHub Preview](https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=1200&h=400&fit=crop)
+### � Em Desenvolvimento  
+- Chat em tempo real (WebSocket)
+- Criação de streams
+- Upload de mídia
+- Perfil do usuário
 
----
+## 🎨 Componentes UI (shadcn/ui)
 
-## 🚀 Tecnologias
+### Implementados
+- Button, Input, Label
+- Card, Avatar, Badge
+- Dialog, Alert, Tabs
+- Form components
+- Navigation components
 
-### Core
-- **React 18** - Biblioteca UI moderna
-- **TypeScript** - Tipagem estática
-- **Vite** - Build tool ultra-rápido
+### Design System
+- Sistema de cores consistente
+- Tipografia responsiva
+- Dark/Light mode ready
+- Componentes acessíveis
 - **React Router** - Roteamento SPA
 
 ### UI/UX

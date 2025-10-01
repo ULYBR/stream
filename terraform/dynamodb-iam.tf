@@ -1,8 +1,4 @@
-# StreamHub - DynamoDB IAM Policies
-
-# IAM policy for DynamoDB access
 data "aws_iam_policy_document" "dynamodb_policy" {
-  # Users table permissions
   statement {
     effect = "Allow"
     actions = [
@@ -19,7 +15,6 @@ data "aws_iam_policy_document" "dynamodb_policy" {
     ]
   }
 
-  # Streams table permissions
   statement {
     effect = "Allow"
     actions = [
@@ -36,7 +31,6 @@ data "aws_iam_policy_document" "dynamodb_policy" {
     ]
   }
 
-  # Chat messages table permissions
   statement {
     effect = "Allow"
     actions = [
@@ -71,7 +65,6 @@ data "aws_iam_policy_document" "dynamodb_policy" {
   }
 }
 
-# IAM policy resource
 resource "aws_iam_policy" "dynamodb_policy" {
   name        = "${local.name_prefix}-dynamodb-policy"
   description = "IAM policy for DynamoDB access in StreamHub application"
@@ -80,7 +73,6 @@ resource "aws_iam_policy" "dynamodb_policy" {
   tags = local.common_tags
 }
 
-# Read-only DynamoDB policy for monitoring/debugging
 data "aws_iam_policy_document" "dynamodb_readonly_policy" {
   statement {
     effect = "Allow"

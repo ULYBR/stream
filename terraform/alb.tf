@@ -41,45 +41,6 @@ resource "aws_security_group" "alb" {
   tags = local.common_tags
 }
 
-resource "aws_security_group" "eks_nodes" {
-  name        = "${local.name_prefix}-eks-nodes-sg"
-  description = "Security group for EKS worker nodes"
-  vpc_id      = data.aws_vpc.default.id
-
-  ingress {
-    description     = "Traffic from ALB"
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  ingress {
-    description = "Node to node"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "-1"
-    self        = true
-  }
-
-  ingress {
-    description = "Control plane to nodes"
-    from_port   = 1025
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = local.common_tags
-}
-
 resource "aws_lb_target_group" "backend" {
   name        = "${local.name_prefix}-backend-tg"
   port        = 3000
@@ -175,6 +136,18 @@ resource "aws_lb_listener_rule" "api" {
 
   tags = local.common_tags
 }
+resource "aws_lb_listener" "backend" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "3000"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  tags = local.common_tags
+}
 
 resource "aws_acm_certificate" "main" {
   domain_name       = var.domain_name
@@ -193,7 +166,6 @@ resource "aws_acm_certificate" "main" {
 
 resource "aws_acm_certificate_validation" "main" {
   count = var.localstack_endpoint == "" ? 1 : 0
-  
   certificate_arn         = aws_acm_certificate.main.arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 
@@ -205,7 +177,6 @@ resource "aws_acm_certificate_validation" "main" {
 
 data "aws_route53_zone" "main" {
   count = var.localstack_endpoint == "" ? 1 : 0
-  
   name         = var.domain_name
   private_zone = false
 }
@@ -229,7 +200,6 @@ resource "aws_route53_record" "cert_validation" {
 
 resource "aws_route53_record" "main" {
   count = var.localstack_endpoint == "" ? 1 : 0
-  
   zone_id = data.aws_route53_zone.main[0].zone_id
   name    = var.domain_name
   type    = "A"

@@ -6,7 +6,6 @@ import { DynamoCommanderWrapper } from "@app/utils/dynamoCommands";
 import { UserController } from "@app/modules/user/controller/user.controller";
 import { DynamoClient } from "@app/providers/dynamo.client";
 import { AuthModule } from "@app/modules/auth/auth.module";
-import { JwtProvider } from "@app/modules/auth/provider/jwt.provider";
 
 @Module({
   imports: [AuthModule],
@@ -20,4 +19,4 @@ import { JwtProvider } from "@app/modules/auth/provider/jwt.provider";
   controllers: [UserController],
   exports: [UserRepository],
 })
-export class UserModule { }
+export class UserModule {}

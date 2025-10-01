@@ -7,6 +7,7 @@ import {
   InternalServerErrorException,
   Req,
   UseGuards,
+  ExecutionContext,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
 import { CreateUserDto } from "@app/modules/user/dto/create-user.dto";
@@ -32,7 +33,7 @@ export class UserController {
     private readonly userService: UserService,
     private readonly avatarService: AvatarService,
     private readonly logger: Logger,
-  ) { }
+  ) {}
   @UseGuards(JwtAuthGuard)
   @Post("avatar")
   @UseInterceptors(FileInterceptor("file"))
@@ -41,13 +42,17 @@ export class UserController {
   @ApiResponse({ status: 400, description: "Validation error." })
   async uploadAvatar(
     @Req() req: AuthenticatedRequest,
-    @UploadedFile() file: Express.Multer.File
+    @UploadedFile() file: Express.Multer.File,
   ) {
     const userId = req.user.id;
     try {
       const buffer = file.buffer;
       const mimeType = file.mimetype;
-      const url = await this.avatarService.uploadAvatar(userId, buffer, mimeType);
+      const url = await this.avatarService.uploadAvatar(
+        userId,
+        buffer,
+        mimeType,
+      );
       this.logger.log({ msg: "Avatar uploaded", userId, url });
       return { message: "Avatar uploaded", url };
     } catch (error) {
@@ -87,7 +92,7 @@ export class UserController {
     if (updateUserDto.role) {
       MasterRoleGuard.prototype.canActivate({
         switchToHttp: () => ({ getRequest: () => req }),
-      } as any);
+      } as ExecutionContext);
     }
     this.logger.log({
       msg: "User update attempt",
